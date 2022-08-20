@@ -62,3 +62,12 @@ class AXI4Bundle(val params: AXI4BundleParams) extends Bundle {
 object AXI4Bundle {
   def apply(params: AXI4BundleParams) = new AXI4Bundle(params)
 }
+
+object AXI4MasterBundle {
+  def apply(params: AXI4BundleParams) = AXI4Bundle(params)
+}
+
+object AXI4SlaveBundle {
+  def apply(params: AXI4BundleParams) = Flipped(AXI4Bundle(params))
+}
+

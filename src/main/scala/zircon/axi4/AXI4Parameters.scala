@@ -13,7 +13,6 @@ package zircon.axi4
 
 import chisel3._
 import chisel3.internal.sourceinfo._
-import chisel3.util._
 import freechips.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 
@@ -45,6 +44,7 @@ trait HasAXI4Parameters {
   def CACHE_WALLOCATE  = 4.U(cacheBits.W)
   def CACHE_MODIFIABLE = 2.U(cacheBits.W)
   def CACHE_BUFFERABLE = 1.U(cacheBits.W)
+  def CACHE_NONBUFFERABLE = 0.U(cacheBits.W)
 
   def PROT_PRIVILEDGED = 1.U(protBits.W)
   def PROT_INSECURE    = 2.U(protBits.W)
@@ -78,6 +78,7 @@ case class AXI4MasterParams (
                               nodePath: Seq[BaseNode] = Seq()
                             )
 case class AXI4SlaveParams(
+                            name: String,
                             addrBits: Int,
                             dataBits: Int,
                             idBits: Int,
@@ -92,9 +93,9 @@ case class AXI4MasterPortParams (
                                 ) {
   val addrBits: Int = masters.map(_.addrBits).max
   val dataBits: Int = masters.map(_.dataBits).max
-  val idBits: Int = masters.map(_.idBits).max
+  val idBits: Int   = masters.map(_.idBits).max
   val userBits: Int = masters.map(_.userBits).max
-  val nBeats: Int = masters.map(_.nBeats).max
+  val nBeats: Int   = masters.map(_.nBeats).max
 }
 
 case class AXI4SlavePortParams (
@@ -102,9 +103,9 @@ case class AXI4SlavePortParams (
                                ) {
   val addrBits: Int = slaves.map(_.addrBits).max
   val dataBits: Int = slaves.map(_.dataBits).max
-  val idBits: Int = slaves.map(_.idBits).max
+  val idBits: Int   = slaves.map(_.idBits).max
   val userBits: Int = slaves.map(_.userBits).max
-  val nBeats: Int = slaves.map(_.nBeats).max
+  val nBeats: Int   = slaves.map(_.nBeats).max
 }
 
 //
@@ -113,7 +114,7 @@ object AXI4BundleParams {
     new AXI4BundleParams(
       addrBits = slave.addrBits,
       dataBits = slave.dataBits,
-      idBits = slave.idBits,
+      idBits   = slave.idBits,
       userBits = slave.userBits
     )
   }

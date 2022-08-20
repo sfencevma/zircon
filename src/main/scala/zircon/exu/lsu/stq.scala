@@ -9,28 +9,29 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PubL v2 for more details.
  */
-package zircon.exu.lsu
+package zircon.exu
 
 import chisel3._
 import chisel3.util._
 import freechips.rocketchip.config._
 import zircon.common._
-import zircon.util._
+import zircon.utils._
+
 
 class STQEntry(implicit p: Parameters) extends BaseZirconBundle with ScalarOpConstants {
-  val is_amo    = Bool()
   val rob_id    = UInt(robIdBits.W)
   val addr      = UInt(vaddrBits.W)
   val data      = UInt(xLen.W)
   val dw        = UInt(DW_SZ.W)
+  val is_amo    = Bool()
+  val is_mmio   = Bool()
   val cr_line   = Bool()
   val fst_done  = Bool()
   val fst_ppn   = UInt(ppnBits.W)
   val sec_done  = Bool()
   val sec_ppn   = UInt(ppnBits.W)
-  val cause     = UInt(eLen.W)
 
-  def ready = Mux(cr_line, fst_done & sec_done, fst_done) | cause.orR
+  def ready = Mux(cr_line, fst_done & sec_done, fst_done)
 }
 
 class STQReq(implicit p: Parameters) extends BaseZirconBundle with ScalarOpConstants {
@@ -38,6 +39,7 @@ class STQReq(implicit p: Parameters) extends BaseZirconBundle with ScalarOpConst
   val st_id     = UInt(stqIdBits.W)
   val secondary = Bool()
   val is_amo    = Bool()
+  val is_mmio   = Bool()
   val addr      = UInt(vaddrBits.W)
   val data      = UInt(xLen.W)
   val dw        = UInt(DW_SZ.W)
@@ -45,16 +47,9 @@ class STQReq(implicit p: Parameters) extends BaseZirconBundle with ScalarOpConst
   val ppn       = UInt(ppnBits.W)
 }
 
-class STQMSHRReq(implicit p: Parameters) extends BaseZirconBundle {
-  val st_id     = UInt(stqIdBits.W)
-  val secondary = Bool()
-  val ppn       = UInt(ppnBits.W)
-  val cause     = UInt(eLen.W)
-}
-
 class STQExecCheckResp(implicit p: Parameters) extends BaseZirconBundle {
   val flush = Bool()
-  val addr = UInt(vaddrBits.W)
+  val addr  = UInt(vaddrBits.W)
 }
 
 class STQ(implicit p: Parameters) extends BaseZirconModule with ScalarOpConstants {
@@ -66,57 +61,41 @@ class STQ(implicit p: Parameters) extends BaseZirconModule with ScalarOpConstant
     val exec_req = Input(UInt(stqIdBits.W))
     val exec_resp = Output(new STQEntry)
 
-    //  MSHR
-    val mshr_req = Flipped(Valid(new STQMSHRReq))
-
     //  LDQ Snoop
     val snoop = Flipped(new LDQSnoopIO)
 
-    //  PTR
+    //
     val head = Input(UInt(stqIdBits.W))
     val tail = Input(UInt(stqIdBits.W))
   })
 
-  val stq = Reg(Vec(numStqEntries, new STQEntry()))
+  val stq = Reg(Vec(numStqEntries, new STQEntry))
 
   //  Enter Queue
   val stq_enq_req = WireInit(io.req.bits)
   val stq_enq_idx = hashIdx(io.req.bits.st_id)
+  val full_mask = MuxCase(~0.U(xLen.W),
+    Array(
+      (stq_enq_req.dw === DW_8 ) -> 0xff.U,
+      (stq_enq_req.dw === DW_16) -> 0xffff.U,
+      (stq_enq_req.dw === DW_32) -> Fill(32, 1.U)
+    ))
 
   when (io.req.valid) {
     stq(stq_enq_idx).is_amo := stq_enq_req.is_amo
+    stq(stq_enq_idx).is_mmio:= stq_enq_req.is_mmio
     stq(stq_enq_idx).rob_id := stq_enq_req.rob_id
-    stq(stq_enq_idx).addr := stq_enq_req.addr
-    stq(stq_enq_idx).data := stq_enq_req.data
-    stq(stq_enq_idx).dw   := stq_enq_req.dw
+    stq(stq_enq_idx).addr   := stq_enq_req.addr
+    stq(stq_enq_idx).data   := MaskData(0.U, stq_enq_req.data, full_mask)
+    stq(stq_enq_idx).dw     := stq_enq_req.dw
     stq(stq_enq_idx).cr_line := stq_enq_req.cr_line
 
-    //  From DTLB
-    when (!io.req.bits.secondary) {
+    when(!io.req.bits.secondary) {
       stq(stq_enq_idx).fst_done := true.B
-      stq(stq_enq_idx).fst_ppn := stq_enq_req.ppn
-    } .otherwise {
+      stq(stq_enq_idx).fst_ppn  := stq_enq_req.ppn
+    }.otherwise {
       stq(stq_enq_idx).sec_done := true.B
-      stq(stq_enq_idx).sec_ppn := stq_enq_req.ppn
-    }
-
-    stq(stq_enq_idx).cause := 0.U
-  }
-
-  //  From Memory
-  val mshr_req_idx = hashIdx(io.mshr_req.bits.st_id)
-  when (io.mshr_req.valid) {
-    when (!io.mshr_req.bits.secondary) {
-      stq(mshr_req_idx).fst_done := true.B
-      stq(mshr_req_idx).fst_ppn := io.mshr_req.bits.ppn
-      stq(mshr_req_idx).cause := io.mshr_req.bits.cause
-    } .otherwise {
-      stq(mshr_req_idx).sec_done := true.B
-      stq(mshr_req_idx).sec_ppn := io.mshr_req.bits.ppn
-
-      when (!stq(mshr_req_idx).cause.orR) {
-        stq(mshr_req_idx).cause := io.mshr_req.bits.cause
-      }
+      stq(stq_enq_idx).sec_ppn  := stq_enq_req.ppn
     }
   }
 
@@ -128,9 +107,13 @@ class STQ(implicit p: Parameters) extends BaseZirconModule with ScalarOpConstant
     case (prev, next) =>
       val (prev_slot, prev_valid) = prev
       val (next_slot, next_valid) = next
-      Mux(prev_valid & next_valid,
-        Mux(checkOld(prev_slot.rob_id, next_slot.rob_id), next, prev),
-        Mux(prev_valid, prev, next))
+      val slot = Mux(prev_valid & next_valid,
+                  Mux(checkOld(prev_slot.rob_id, next_slot.rob_id), next_slot, prev_slot),
+                    Mux(prev_valid, prev_slot, next_slot))
+      val valid = Mux(prev_valid & next_valid,
+                    Mux(checkOld(prev_slot.rob_id, next_slot.rob_id), next_valid, prev_valid),
+                     Mux(prev_valid, prev_valid, next_valid))
+      (slot, valid)
   }
 
   io.snoop.resp.valid := RegNext(io.snoop.req.valid & snoop_hit)
@@ -138,6 +121,7 @@ class STQ(implicit p: Parameters) extends BaseZirconModule with ScalarOpConstant
   io.snoop.resp.bits.data := RegNext(snoop_sel_entry.data)
 
   //
-  val exec_idx = hashIdx(io.exec_req)
-  io.exec_resp := stq(exec_idx)
+  io.exec_resp := stq(hashIdx(io.exec_req))
+
+  // End
 }

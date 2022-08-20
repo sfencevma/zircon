@@ -11,13 +11,11 @@
  */
 package zircon.common
 
-import chisel3._
 import chisel3.util._
 import freechips.rocketchip.config._
-import zircon.ifu.icache._
-import zircon.ifu._
-import zircon.exu.lsu._
-import zircon.exu.lsu.dcache.DCacheParams
+import zircon.frontend._
+import zircon.exu._
+import zircon.axi4._
 
 trait TileParameters {
   val core: ZirconCoreParams
@@ -33,11 +31,17 @@ case class ZirconTileParams (
                               hartId: Int
                             )
 
+case class DebugOptions (
+                        EnableDifftest: Boolean = false,
+                        UseDRAMSim: Boolean = true
+                        )
+
 case object TileKey extends Field[ZirconTileParams]
 case object XLEN extends Field[Int]
 case object ILEN extends Field[Int]
 case object PgLevels extends Field[Int]
 case object ASIdBits extends Field[Int]
+case object DebugOptionsKey extends Field[DebugOptions]
 
 trait HasTileParameters {
   implicit val p: Parameters

@@ -12,7 +12,6 @@
 package zircon.mmu
 
 import chisel3._
-import chisel3.util._
 import freechips.rocketchip.config._
 import zircon.common._
 

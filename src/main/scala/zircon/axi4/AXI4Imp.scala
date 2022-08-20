@@ -11,12 +11,9 @@
  */
 package zircon.axi4
 
-import chisel3._
 import chisel3.internal.sourceinfo._
-import chisel3.util._
 import freechips.rocketchip.config._
 import freechips.rocketchip.diplomacy._
-import zircon.axi4.AXI4Imp.bundle
 
 object AXI4Imp extends SimpleNodeImp[AXI4MasterPortParams, AXI4SlavePortParams, AXI4EdgeParams, AXI4Bundle] {
   //  Collect downstream and upstream parameters into an edge

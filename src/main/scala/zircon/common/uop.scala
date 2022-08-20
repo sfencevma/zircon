@@ -52,6 +52,57 @@ class MicroOp(implicit p: Parameters) extends BaseZirconBundle
   val dyn_rm      = Bool()
   val rm          = UInt(3.W)
 
+  //  Predictor information
+  val is_jmp      = Bool()
+  val is_br       = Bool()
+  val is_call     = Bool()
+  val is_ret      = Bool()
+  val taken       = Bool()
+  val tg_addr     = UInt(vaddrBits.W)
+
+  //  Issue information
+  val rob_id      = UInt(robIdBits.W)
+  val is_ld       = Bool()
+  val ld_id       = UInt(ldqIdBits.W)
+  val is_st       = Bool()
+  val st_id       = UInt(stqIdBits.W)
+  val rsv_id      = UInt(rsvIdBits.W)
+  val wakeup      = UInt(WAKEUP_SZ.W)
+  val mem_cmd     = UInt(M_SZ.W)
+
+  //  Misc information
+  val addr        = UInt(vaddrBits.W)
+  val cause       = UInt(eLen.W)
+}
+
+class IssueMicroOp(implicit p: Parameters) extends BaseZirconBundle
+  with ScalarOpConstants
+  with MemoryOpConstants
+{
+  //  Common information
+  val uopc        = UInt(UOP_SZ.W)
+  val len         = Bool()
+  val dw          = UInt(DW_SZ.W)
+  val port        = UInt(PORT_SZ.W)
+  val usign       = Bool()
+
+  //  Register information
+  val lrs1_vld    = Bool()
+  val lrs1_type   = UInt(RT_SZ.W)
+  val lrs1        = UInt(xLen.W)
+  val lrs2_vld    = Bool()
+  val lrs2_type   = UInt(RT_SZ.W)
+  val lrs2        = UInt(xLen.W)
+  val lrs3_vld    = Bool()
+  val lrs3_type   = UInt(RT_SZ.W)
+  val lrs3        = UInt(xLen.W)
+  val ldst_vld    = Bool()
+  val imm         = UInt(immBits.W)
+
+  //  Floating point information
+  val dyn_rm      = Bool()
+  val rm          = UInt(3.W)
+
   //  Issue information
   val rob_id      = UInt(robIdBits.W)
   val is_ld       = Bool()
@@ -60,6 +111,50 @@ class MicroOp(implicit p: Parameters) extends BaseZirconBundle
   val st_id       = UInt(stqIdBits.W)
   val wakeup      = UInt(WAKEUP_SZ.W)
   val mem_cmd     = UInt(M_SZ.W)
+
+  //
+  val is_amo      = Bool()
+  val is_csr      = Bool()
+
+  //  Misc information
+  val addr        = UInt(vaddrBits.W)
+  val cause       = UInt(eLen.W)
+}
+
+class RobMicroOp(implicit p: Parameters) extends BaseZirconBundle
+  with ScalarOpConstants
+  with MemoryOpConstants
+{
+  //  Common information
+  val uopc        = UInt(UOP_SZ.W)
+  val len         = Bool()
+  val port        = UInt(PORT_SZ.W)
+
+
+  //  Register information
+  val ldst_vld    = Bool()
+  val ldst_type   = UInt(RT_SZ.W)
+  val ldst_lreg   = UInt(lregSz.W)
+  val csr_addr    = UInt(csrAddrBits.W)
+
+  //  Predictor information
+  val is_jmp      = Bool()
+  val is_br       = Bool()
+  val is_call     = Bool()
+  val is_ret      = Bool()
+  val taken       = Bool()
+  val tg_addr     = UInt(vaddrBits.W)
+
+  //
+  val is_amo      = Bool()
+  val is_csr      = Bool()
+
+  //  Issue information
+  val rob_id      = UInt(robIdBits.W)
+  val is_ld       = Bool()
+  val ld_id       = UInt(ldqIdBits.W)
+  val is_st       = Bool()
+  val st_id       = UInt(stqIdBits.W)
 
   //  Misc information
   val addr        = UInt(vaddrBits.W)

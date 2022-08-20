@@ -17,27 +17,34 @@ import chisel3.util._
 trait ScalarOpConstants {
   //  Issue port
   def PORT_SZ    =  7
-  def PORT_ALU   =  1.U(PORT_SZ.W)
-  def PORT_BRU   =  2.U(PORT_SZ.W)
-  def PORT_MUL   =  4.U(PORT_SZ.W)
-  def PORT_DIV   =  8.U(PORT_SZ.W)
-  def PORT_FPU   = 16.U(PORT_SZ.W)
-  def PORT_FDIV  = 32.U(PORT_SZ.W)
-  def PORT_LSU   = 64.U(PORT_SZ.W)
+  def ALU_PORT   =  0
+  def BRU_PORT   =  1
+  def MUL_PORT   =  2
+  def DIV_PORT   =  3
+  def LSU_PORT   =  4
+  def FPU_PORT   =  5
+  def FDIV_PORT  =  6
+  def PORT_ALU   = (1 << ALU_PORT).U(PORT_SZ.W)
+  def PORT_BRU   = (1 << BRU_PORT).U(PORT_SZ.W)
+  def PORT_MUL   = (1 << MUL_PORT).U(PORT_SZ.W)
+  def PORT_DIV   = (1 << DIV_PORT).U(PORT_SZ.W)
+  def PORT_LSU   = (1 << LSU_PORT).U(PORT_SZ.W)
+  def PORT_FPU   = (1 << FPU_PORT).U(PORT_SZ.W)
+  def PORT_FDIV  = (1 << FDIV_PORT).U(PORT_SZ.W)
 
   //  Immediate format
   def IS_SZ  = 3
   def IS_I   = 0.U(IS_SZ.W)  // I-Type  (LD,ALU)
   def IS_S   = 1.U(IS_SZ.W)  // S-Type  (ST)
-  def IS_B   = 2.U(IS_SZ.W)  // SB-Type (BR)
+  def IS_B   = 2.U(IS_SZ.W)  // B-Type (BR)
   def IS_U   = 3.U(IS_SZ.W)  // U-Type  (LUI/AUIPC)
-  def IS_J   = 4.U(IS_SZ.W)  // UJ-Type (J/JAL)
+  def IS_J   = 4.U(IS_SZ.W)  // J-Type (J/JAL)
   def IS_X   = BitPat("b???")
 
   //  Register type
   def RT_SZ      = 3
   def RT_X       = 0.U(RT_SZ.W)
-  def RT_INT     = 1.U(RT_SZ.W)
+  def RT_FIX     = 1.U(RT_SZ.W)
   def RT_FP      = 2.U(RT_SZ.W)
   def RT_IMM     = 3.U(RT_SZ.W)
   def RT_PC      = 4.U(RT_SZ.W)
@@ -59,6 +66,7 @@ trait ScalarOpConstants {
   def UOP_LUI     =  3.U(UOP_SZ.W)
   def UOP_AUIPC   =  4.U(UOP_SZ.W)
   def UOP_JAL     =  5.U(UOP_SZ.W)
+  def UOP_JALR    =  6.U(UOP_SZ.W)
   def UOP_BEQ     =  7.U(UOP_SZ.W)
   def UOP_BNE     =  8.U(UOP_SZ.W)
   def UOP_BLT     =  9.U(UOP_SZ.W)

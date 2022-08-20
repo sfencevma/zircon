@@ -12,7 +12,6 @@
 package zircon.mmu
 
 import chisel3._
-import chisel3.util._
 import freechips.rocketchip.config._
 
 class PTE(implicit p: Parameters) extends Bundle {

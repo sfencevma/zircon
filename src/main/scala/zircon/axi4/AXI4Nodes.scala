@@ -11,11 +11,7 @@
  */
 package zircon.axi4
 
-
-import chisel3._
-import chisel3.util._
 import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.config._
 
 //  Define master node
 case class AXI4MasterNode(portParams: Seq[AXI4MasterPortParams])(implicit valName: ValName) extends SourceNode(AXI4Imp)(portParams)

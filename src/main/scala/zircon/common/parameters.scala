@@ -11,13 +11,10 @@
  */
 package zircon.common
 
-import chisel3._
 import chisel3.util._
-import freechips.rocketchip.config._
-import zircon.ifu.icache._
-import zircon.ifu._
-import zircon.exu.lsu._
-import zircon.exu.lsu.dcache.DCacheParams
+import zircon.axi4.{AXI4BundleParams, AXI4MasterParams}
+import zircon.frontend._
+import zircon.exu._
 
 trait ZirconCoreParameters {
   val useVM: Boolean
@@ -58,47 +55,81 @@ case class ZirconCoreParams (
                               numLdqEntries: Int = 32,
                               numStqEntries: Int = 32,
                               numRsvEntries: Int = 64,
-                              numFetchBufferEntries: Int = 32,
+                              numIssuePorts: Int = 5,
                               nPMPs: Int = 0,
                               nPerfCounters: Int = 16,
-                              nMSHRs: Int = 16
+                              nMSHRs: Int = 16,
+                              nHarts: Int = 1
                             ) extends ZirconCoreParameters {
   val instBits: Int = 32
-  val haveFSDirty: Boolean = true
+  val haveFSDirty: Boolean = false
   val misaWritable: Boolean = false
   val mtvecWritable: Boolean = true
 }
 
 trait HasZirconCoreParameters extends HasTileParameters {
-  val zirconParams: ZirconCoreParams = tileParams.core.asInstanceOf[ZirconCoreParams]
+  val zirconParams: ZirconCoreParams = tileParams.core
 
-  val fetchWidth: Int = zirconParams.fetchWidth
-  val decodeWidth: Int = zirconParams.decodeWidth
-  val retireWidth: Int = zirconParams.retireWidth
+  //  Debug
+  def env: DebugOptions = p(DebugOptionsKey)
 
-  val numRobEntries: Int = zirconParams.numRobEntries
-  val numLdqEntries: Int = zirconParams.numLdqEntries
-  val numStqEntries: Int = zirconParams.numStqEntries
-  val numRsvEntries: Int = zirconParams.numRsvEntries
-  val numFetchBufferEntries: Int = zirconParams.numFetchBufferEntries
-  val robIdBits: Int = log2Ceil(numRobEntries) + 1
-  val ldqIdBits: Int = log2Ceil(numLdqEntries) + 1
-  val stqIdBits: Int = log2Ceil(numStqEntries) + 1
-  val rsvIdBits: Int = log2Ceil(numRsvEntries)
+  //  ********************************************
+  //  Superscaler widths.
+  val fetchWidth:  Int  = zirconParams.fetchWidth
+  val decodeWidth: Int  = zirconParams.decodeWidth
+  val retireWidth: Int  = zirconParams.retireWidth
 
+  //  ********************************************
+  //  Data structure sizes.
+  val numRobEntries: Int          = zirconParams.numRobEntries
+  val numLdqEntries: Int          = zirconParams.numLdqEntries
+  val numStqEntries: Int          = zirconParams.numStqEntries
+  val numAluEntries: Int          = 16
+  val numMulEntries: Int          = 16
+  val numDivEntries: Int          = 16
+  val numLsuEntries: Int          = 16
+  val numIssuePorts: Int          = zirconParams.numIssuePorts
+  val numRsvEntries: Int          = zirconParams.numRsvEntries
+  val robIdBits: Int              = log2Ceil(numRobEntries) + 1
+  val ldqIdBits: Int              = log2Ceil(numLdqEntries) + 1
+  val stqIdBits: Int              = log2Ceil(numStqEntries) + 1
+  val rsvIdBits: Int              = log2Ceil(numRsvEntries)
+  val numLRegs: Int               = 32
+  val lregSz: Int                 = log2Ceil(numLRegs)
+
+  //  ********************************************
+  //  
   val instBits: Int = zirconParams.instBits
   val immBits: Int = 32
-
-  //  Register
-  val numLRegs: Int = 32
-  val lregSz: Int = log2Ceil(numLRegs)
   val csrAddrBits: Int = 12
 
+  //  ********************************************
   //  Dcache & ICache Parameters
   val icacheParams: ICacheParams = tileParams.icache
   val dcacheParams: DCacheParams = tileParams.dcache
+
+  //  ********************************************
+  //  
+  val nPMPs: Int          = zirconParams.nPMPs
+  val nPerfCounters: Int  = zirconParams.nPerfCounters
+  val nMSHRs: Int         = zirconParams.nMSHRs
+
+  //  ********************************************
   //
-  val nPMPs: Int = zirconParams.nPMPs
-  val nPerfCounters: Int = zirconParams.nPerfCounters
-  val nMSHRs: Int = zirconParams.nMSHRs
+  val nHarts: Int         = zirconParams.nHarts
+
+  //  ********************************************
+  //  Memory Parameters
+  val memBusParams = AXI4BundleParams(
+    addrBits = paddrBits,
+    dataBits = 128,
+    idBits   = 4,
+    userBits = 4
+  )
+  val mmapBusParams = AXI4BundleParams (
+    addrBits = vaddrBits,
+    dataBits = xLen,
+    idBits   = 4,
+    userBits = 4
+  )
 }
